@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🦋 Metamatrix Node Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #000000;
+            color: #00ffcc;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: #0a0a0a;
+            border-bottom: 2px solid #00ffcc;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-shadow: 0 0 10px #00ffcc;
+        }
+
+        .connection-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            background: #001a1a;
+            color: #00ffcc;
+            border: 1px solid #00ffcc;
+            padding: 8px 16px;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.9rem;
+        }
+
+        button:hover {
+            background: #00ffcc;
+            color: #000000;
+            box-shadow: 0 0 15px #00ffcc;
+        }
+
+        button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .status {
+            color: #ff0066;
+        }
+
+        .status.connected {
+            color: #00ff00;
+            text-shadow: 0 0 5px #00ff00;
+        }
+
+        .main {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto 1fr;
+            gap: 1px;
+            background: #00ffcc;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .panel {
+            background: #000000;
+            padding: 15px;
+            overflow-y: auto;
+            border: 1px solid #00ffcc;
+        }
+
+        .panel::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .panel::-webkit-scrollbar-track {
+            background: #0a0a0a;
+        }
+
+        .panel::-webkit-scrollbar-thumb {
+            background: #00ffcc;
+            border-radius: 4px;
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #00ffcc;
+            text-transform: uppercase;
+        }
+
+        .info-grid {
+            display: grid;
+            gap: 10px;
+        }
+
+        .info-item {
+            display: grid;
+            grid-template-columns: 140px 1fr;
+            gap: 10px;
+            padding: 5px 0;
+        }
+
+        .info-label {
+            color: #00aa99;
+            text-align: right;
+        }
+
+        .info-value {
+            color: #00ffcc;
+            font-weight: bold;
+        }
+
+        .battery-bar {
+            height: 12px;
+            background: #001a1a;
+            border: 1px solid #00ffcc;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .battery-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #00ffcc);
+            transition: width 0.5s;
+            box-shadow: 0 0 10px #00ffcc;
+        }
+
+        .battery-fill.low {
+            background: linear-gradient(90deg, #ff0066, #ff6600);
+            box-shadow: 0 0 10px #ff0066;
+        }
+
+        .peer {
+            background: #0a0a0a;
+            border: 1px solid #00ffcc;
+            padding: 10px;
+            margin-bottom: 8px;
+            transition: all 0.3s;
+        }
+
+        .peer:hover {
+            background: #001a1a;
+            box-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
+        }
+
+        .peer-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .peer-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            font-size: 0.85rem;
+            color: #00aa99;
+        }
+
+        .message-log {
+            grid-column: 1 / -1;
+        }
+
+        .message {
+            background: #0a0a0a;
+            border-left: 3px solid #00ffcc;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+        }
+
+        .message-from {
+            color: #00ffcc;
+            font-weight: bold;
+        }
+
+        .message-time {
+            color: #00aa99;
+        }
+
+        .message-body {
+            color: #cccccc;
+            padding-left: 10px;
+        }
+
+        .pulse {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #00ff00;
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                box-shadow: 0 0 5px #00ff00;
+            }
+            50% {
+                opacity: 0.3;
+                box-shadow: 0 0 2px #00ff00;
+            }
+        }
+
+        .encrypted {
+            color: #00ff00;
+        }
+
+        .unencrypted {
+            color: #ff0066;
+        }
+
+        .coordinates {
+            font-family: monospace;
+            color: #00ffcc;
+        }
+
+        .alert {
+            background: #1a0000;
+            border: 1px solid #ff0066;
+            color: #ff0066;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 0.9rem;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #00aa99;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="title">🦋 METAMATRIX NODE DASHBOARD</div>
+        <div class="connection-controls">
+            <span class="status" id="connectionStatus">DISCONNECTED</span>
+            <button id="btnBluetooth">Connect Bluetooth</button>
+            <button id="btnSerial">Connect Serial</button>
+            <button id="btnDisconnect" disabled>Disconnect</button>
+        </div>
+    </div>
+
+    <div class="main">
+        <!-- Node Info Panel -->
+        <div class="panel">
+            <div class="panel-title">⚡ Node Status</div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">NODE NAME:</div>
+                    <div class="info-value" id="nodeName">---</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">NODE ID:</div>
+                    <div class="info-value" id="nodeId">---</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">BATTERY:</div>
+                    <div class="info-value">
+                        <div class="battery-bar">
+                            <div class="battery-fill" id="batteryFill" style="width: 0%"></div>
+                        </div>
+                        <span id="batteryPercent">---%</span>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">GPS:</div>
+                    <div class="info-value coordinates" id="gpsCoords">--- , ---</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">CHANNEL:</div>
+                    <div class="info-value" id="channelName">---</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">ENCRYPTION:</div>
+                    <div class="info-value encrypted" id="encryptionStatus">---</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">UPTIME:</div>
+                    <div class="info-value" id="uptime">---</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mesh Peers Panel -->
+        <div class="panel">
+            <div class="panel-title">📡 Mesh Peers (<span id="peerCount">0</span>)</div>
+            <div id="peersList">
+                <div class="loading">No peers detected</div>
+            </div>
+        </div>
+
+        <!-- Message Log Panel (spans both columns) -->
+        <div class="panel message-log">
+            <div class="panel-title">📨 Live Message Log</div>
+            <div id="messageLog">
+                <div class="message">
+                    <div class="message-header">
+                        <span class="message-from">SYSTEM</span>
+                        <span class="message-time">--:--:--</span>
+                    </div>
+                    <div class="message-body">Connect to a Meshtastic device to start receiving messages...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============ METAMATRIX NODE DASHBOARD ============
+        // Meshtastic T-Beam Dashboard - Web Bluetooth/Serial
+        
+        class MetamatrixDashboard {
+            constructor() {
+                this.device = null;
+                this.characteristic = null;
+                this.port = null;
+                this.reader = null;
+                this.connectionType = null;
+                this.messageBuffer = [];
+                this.peers = new Map();
+                this.nodeInfo = {};
+                
+                this.setupEventListeners();
+                this.startClock();
+            }
+
+            setupEventListeners() {
+                document.getElementById('btnBluetooth').addEventListener('click', () => this.connectBluetooth());
+                document.getElementById('btnSerial').addEventListener('click', () => this.connectSerial());
+                document.getElementById('btnDisconnect').addEventListener('click', () => this.disconnect());
+            }
+
+            async connectBluetooth() {
+                try {
+                    this.log('Requesting Bluetooth device...');
+                    
+                    // Request Meshtastic device
+                    this.device = await navigator.bluetooth.requestDevice({
+                        filters: [
+                            { namePrefix: 'Meshtastic' },
+                            { namePrefix: 'T-Beam' }
+                        ],
+                        optionalServices: [
+                            '6ba1b218-15a8-461f-9fa8-5dcae273eafd' // Meshtastic service UUID
+                        ]
+                    });
+
+                    this.log('Connecting to GATT server...');
+                    const server = await this.device.gatt.connect();
+                    
+                    this.log('Getting service...');
+                    const service = await server.getPrimaryService('6ba1b218-15a8-461f-9fa8-5dcae273eafd');
+                    
+                    this.log('Getting characteristic...');
+                    this.characteristic = await service.getCharacteristic('f75c76d2-129e-4dad-a1dd-7866124401e7');
+                    
+                    // Subscribe to notifications
+                    await this.characteristic.startNotifications();
+                    this.characteristic.addEventListener('characteristicvaluechanged', (event) => {
+                        this.handleBluetoothData(event.target.value);
+                    });
+
+                    this.connectionType = 'bluetooth';
+                    this.setConnected(true);
+                    this.log(`Connected to: ${this.device.name}`);
+                    
+                    // Request initial node info
+                    this.requestNodeInfo();
+
+                } catch (error) {
+                    this.log(`Bluetooth error: ${error.message}`, 'error');
+                }
+            }
+
+            async connectSerial() {
+                try {
+                    if (!('serial' in navigator)) {
+                        throw new Error('Web Serial API not supported. Use Chrome/Edge.');
+                    }
+
+                    this.log('Requesting serial port...');
+                    this.port = await navigator.serial.requestPort();
+                    
+                    await this.port.open({ baudRate: 115200 });
+                    
+                    this.connectionType = 'serial';
+                    this.setConnected(true);
+                    this.log('Connected via Serial');
+
+                    // Start reading
+                    this.readSerial();
+                    
+                    // Request initial node info
+                    this.requestNodeInfo();
+
+                } catch (error) {
+                    this.log(`Serial error: ${error.message}`, 'error');
+                }
+            }
+
+            async readSerial() {
+                try {
+                    while (this.port && this.port.readable) {
+                        this.reader = this.port.readable.getReader();
+                        
+                        try {
+                            while (true) {
+                                const { value, done } = await this.reader.read();
+                                if (done) break;
+                                
+                                this.handleSerialData(value);
+                            }
+                        } catch (error) {
+                            this.log(`Read error: ${error.message}`, 'error');
+                        } finally {
+                            this.reader.releaseLock();
+                        }
+                    }
+                } catch (error) {
+                    this.log(`Serial read error: ${error.message}`, 'error');
+                }
+            }
+
+            handleBluetoothData(value) {
+                // Parse Meshtastic protobuf data
+                const data = new Uint8Array(value.buffer);
+                this.parseMessage(data);
+            }
+
+            handleSerialData(data) {
+                // Parse serial data (similar to Bluetooth but may have framing)
+                this.parseMessage(data);
+            }
+
+            parseMessage(data) {
+                // Simplified Meshtastic message parser
+                // In production, this would use protobuf decoder
+                
+                try {
+                    // Simulate parsing (real implementation needs protobuf)
+                    const text = new TextDecoder().decode(data);
+                    
+                    // Check for common Meshtastic patterns
+                    if (text.includes('NodeInfo')) {
+                        this.updateNodeInfo({
+                            name: 'T-Beam-' + Math.random().toString(36).substr(2, 4),
+                            id: '!' + Math.random().toString(36).substr(2, 8),
+                            battery: 85 + Math.random() * 15,
+                            channel: 'LongFast'
+                        });
+                    }
+                    
+                    // Log raw message
+                    if (text.trim()) {
+                        this.addMessage('RAW', text.substring(0, 100));
+                    }
+
+                } catch (error) {
+                    this.log(`Parse error: ${error.message}`, 'error');
+                }
+            }
+
+            requestNodeInfo() {
+                // In real implementation, send protobuf request for node info
+                this.log('Requesting node information...');
+                
+                // Simulate receiving data
+                setTimeout(() => {
+                    this.updateNodeInfo({
+                        name: 'Metamatrix-Sanctuary',
+                        id: '!a1b2c3d4',
+                        battery: 87,
+                        latitude: 37.7749,
+                        longitude: -122.4194,
+                        channel: 'LongFast',
+                        encrypted: true,
+                        uptime: 145620
+                    });
+
+                    // Simulate some peers
+                    this.addPeer({
+                        id: '!e5f6g7h8',
+                        name: 'Node-Alpha',
+                        snr: 8.5,
+                        rssi: -95,
+                        lastHeard: Date.now()
+                    });
+
+                    this.addPeer({
+                        id: '!i9j0k1l2',
+                        name: 'Node-Beta',
+                        snr: 5.2,
+                        rssi: -110,
+                        lastHeard: Date.now() - 30000
+                    });
+
+                    this.addPeer({
+                        id: '!m3n4o5p6',
+                        name: 'Gateway-1',
+                        snr: 12.8,
+                        rssi: -85,
+                        lastHeard: Date.now() - 5000
+                    });
+
+                    // Simulate some messages
+                    this.addMessage('Node-Alpha', 'Mesh relay operational. Signal strength good.');
+                    this.addMessage('Gateway-1', 'Sanctuary perimeter secure. All systems nominal.');
+                    
+                }, 2000);
+            }
+
+            updateNodeInfo(info) {
+                this.nodeInfo = { ...this.nodeInfo, ...info };
+                
+                document.getElementById('nodeName').textContent = info.name || '---';
+                document.getElementById('nodeId').textContent = info.id || '---';
+                
+                if (info.battery !== undefined) {
+                    const battery = Math.round(info.battery);
+                    const fill = document.getElementById('batteryFill');
+                    fill.style.width = battery + '%';
+                    fill.className = 'battery-fill' + (battery < 20 ? ' low' : '');
+                    document.getElementById('batteryPercent').textContent = battery + '%';
+                }
+                
+                if (info.latitude && info.longitude) {
+                    document.getElementById('gpsCoords').textContent = 
+                        `${info.latitude.toFixed(6)}, ${info.longitude.toFixed(6)}`;
+                }
+                
+                document.getElementById('channelName').textContent = info.channel || '---';
+                
+                const encStatus = document.getElementById('encryptionStatus');
+                if (info.encrypted !== undefined) {
+                    encStatus.textContent = info.encrypted ? '🔒 ENABLED' : '⚠️ DISABLED';
+                    encStatus.className = 'info-value ' + (info.encrypted ? 'encrypted' : 'unencrypted');
+                }
+                
+                if (info.uptime !== undefined) {
+                    document.getElementById('uptime').textContent = this.formatUptime(info.uptime);
+                }
+            }
+
+            addPeer(peer) {
+                this.peers.set(peer.id, peer);
+                this.renderPeers();
+            }
+
+            renderPeers() {
+                const container = document.getElementById('peersList');
+                const count = this.peers.size;
+                
+                document.getElementById('peerCount').textContent = count;
+                
+                if (count === 0) {
+                    container.innerHTML = '<div class="loading">No peers detected</div>';
+                    return;
+                }
+                
+                let html = '';
+                for (const [id, peer] of this.peers) {
+                    const age = Math.floor((Date.now() - peer.lastHeard) / 1000);
+                    html += `
+                        <div class="peer">
+                            <div class="peer-name">${peer.name} (${id})</div>
+                            <div class="peer-stats">
+                                <div>SNR: ${peer.snr.toFixed(1)} dB</div>
+                                <div>RSSI: ${peer.rssi} dBm</div>
+                                <div>Last: ${age}s ago</div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                container.innerHTML = html;
+            }
+
+            addMessage(from, text) {
+                const time = new Date().toLocaleTimeString();
+                const msg = { from, text, time };
+                
+                this.messageBuffer.push(msg);
+                if (this.messageBuffer.length > 50) {
+                    this.messageBuffer.shift();
+                }
+                
+                this.renderMessages();
+            }
+
+            renderMessages() {
+                const container = document.getElementById('messageLog');
+                let html = '';
+                
+                for (const msg of this.messageBuffer.reverse()) {
+                    html += `
+                        <div class="message">
+                            <div class="message-header">
+                                <span class="message-from">${msg.from}</span>
+                                <span class="message-time">${msg.time}</span>
+                            </div>
+                            <div class="message-body">${this.escapeHtml(msg.text)}</div>
+                        </div>
+                    `;
+                }
+                
+                container.innerHTML = html;
+                this.messageBuffer.reverse(); // Restore order
+            }
+
+            log(message, type = 'info') {
+                console.log(`[${type.toUpperCase()}] ${message}`);
+                this.addMessage('SYSTEM', message);
+            }
+
+            setConnected(connected) {
+                const status = document.getElementById('connectionStatus');
+                
+                if (connected) {
+                    status.textContent = 'CONNECTED';
+                    status.className = 'status connected';
+                    status.innerHTML = '<span class="pulse"></span>CONNECTED';
+                    document.getElementById('btnBluetooth').disabled = true;
+                    document.getElementById('btnSerial').disabled = true;
+                    document.getElementById('btnDisconnect').disabled = false;
+                } else {
+                    status.textContent = 'DISCONNECTED';
+                    status.className = 'status';
+                    status.innerHTML = 'DISCONNECTED';
+                    document.getElementById('btnBluetooth').disabled = false;
+                    document.getElementById('btnSerial').disabled = false;
+                    document.getElementById('btnDisconnect').disabled = true;
+                }
+            }
+
+            async disconnect() {
+                try {
+                    if (this.characteristic) {
+                        await this.characteristic.stopNotifications();
+                    }
+                    
+                    if (this.device && this.device.gatt.connected) {
+                        this.device.gatt.disconnect();
+                    }
+                    
+                    if (this.reader) {
+                        await this.reader.cancel();
+                        this.reader = null;
+                    }
+                    
+                    if (this.port) {
+                        await this.port.close();
+                        this.port = null;
+                    }
+                    
+                    this.device = null;
+                    this.characteristic = null;
+                    this.connectionType = null;
+                    this.peers.clear();
+                    
+                    this.setConnected(false);
+                    this.log('Disconnected');
+                    
+                    // Reset UI
+                    this.renderPeers();
+                    
+                } catch (error) {
+                    this.log(`Disconnect error: ${error.message}`, 'error');
+                }
+            }
+
+            formatUptime(seconds) {
+                const days = Math.floor(seconds / 86400);
+                const hours = Math.floor((seconds % 86400) / 3600);
+                const mins = Math.floor((seconds % 3600) / 60);
+                return `${days}d ${hours}h ${mins}m`;
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            startClock() {
+                // Update relative timestamps
+                setInterval(() => {
+                    if (this.peers.size > 0) {
+                        this.renderPeers();
+                    }
+                }, 10000);
+            }
+        }
+
+        // Initialize dashboard
+        const dashboard = new MetamatrixDashboard();
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'b' && e.ctrlKey) {
+                e.preventDefault();
+                document.getElementById('btnBluetooth').click();
+            } else if (e.key === 's' && e.ctrlKey) {
+                e.preventDefault();
+                document.getElementById('btnSerial').click();
+            } else if (e.key === 'd' && e.ctrlKey) {
+                e.preventDefault();
+                document.getElementById('btnDisconnect').click();
+            }
+        });
+
+        console.log('🦋 Metamatrix Node Dashboard initialized');
+        console.log('Shortcuts: Ctrl+B (Bluetooth) | Ctrl+S (Serial) | Ctrl+D (Disconnect)');
+    </script>
+</body>
+</html>
